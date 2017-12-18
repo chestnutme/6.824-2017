@@ -47,7 +47,7 @@ type RegisterArgs struct {
 //
 // please use call() to send all RPCs, in master.go, mapreduce.go,
 // and worker.go.  please don't change this function.
-//
+// NutQ: why send all RPCs by call()?
 func call(srv string, rpcname string,
 	args interface{}, reply interface{}) bool {
 	c, errx := rpc.Dial("unix", srv)

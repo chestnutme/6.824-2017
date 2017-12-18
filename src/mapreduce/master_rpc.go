@@ -56,6 +56,7 @@ func (mr *Master) startRPCServer() {
 // stopRPCServer stops the master RPC server.
 // This must be done through an RPC to avoid race conditions between the RPC
 // server thread and the current thread.
+// NutQ: what the race conditions is ? Why an RPC can void it?
 func (mr *Master) stopRPCServer() {
 	var reply ShutdownReply
 	ok := call(mr.address, "Master.Shutdown", new(struct{}), &reply)

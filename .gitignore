@@ -3,3 +3,5 @@ api.key
 *-handin.tar.gz
 readings/
 *.sublime*
+.idea/
+example/*
