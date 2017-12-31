@@ -60,7 +60,7 @@ func doMap(
 
 	buf, err := ioutil.ReadFile(inFile)
 	if err != nil {
-		fmt.Printf("Read file %s error: %s/n", inFile, err)
+		debug("Read file %s error: %s/n", inFile, err)
 	}
 	kvs := mapF(inFile, string(buf))
 
@@ -71,7 +71,7 @@ func doMap(
 		defer file.Close()
 
 		if err != nil {
-			fmt.Printf("Create file %s error: %s/n", filename, err)
+			debug("Create file %s error: %s/n", filename, err)
 		}
 		enc[i] = json.NewEncoder(file)
 	}
@@ -79,7 +79,7 @@ func doMap(
 	for _, kv := range kvs {
 		err := enc[ihash(kv.Key)%nReduce].Encode(&kv)
 		if err != nil {
-			fmt.Printf("Encode kv %v error: %s/n", kv, err)
+			debug("Encode kv %v error: %s/n", kv, err)
 		}
 	}
 }

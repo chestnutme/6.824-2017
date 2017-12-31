@@ -60,7 +60,7 @@ func doReduce(
 		defer file.Close()
 
 		if err != nil {
-			fmt.Printf("file %s open error: %s/n", filename, err)
+			debug("file %s open error: %s/n", filename, err)
 		}
 		dec := json.NewDecoder(file)
 
@@ -81,7 +81,7 @@ func doReduce(
 	mergeFile, err := os.Create(outFile)
 	defer mergeFile.Close()
 	if err != nil {
-		fmt.Printf("file %s create error: %s/n", outFile, err)
+		debug("file %s create error: %s/n", outFile, err)
 	}
 	enc := json.NewEncoder(mergeFile)
 	for key := range kvs {
