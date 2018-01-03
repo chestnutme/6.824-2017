@@ -100,6 +100,25 @@ type Raft struct {
 	commitLogCh   chan bool
 	grantVoteCh   chan bool
 	winElectionCh chan bool
+
+	// snapshot
+	snapshotIndex int
+	snapshotTerm  int
+}
+
+func (rf *Raft) NewSnapShot(index int) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	if rf.commitIndex < index || index <= rf.snapshotIndex {
+		panic("NewSnapShot(): new.snapshotIndex <= old.snapshotIndex")
+	}
+	// including the last of snapshot's log entry as the first log
+	rf.Logs = rf.Logs[index-rf.snapshotIndex:]
+
+	rf.snapshotIndex = index
+	rf.snapshotTerm = rf.Logs[0].Term
+
+	rf.persist()
 }
 
 // return currentTerm and whether this server
@@ -132,6 +151,8 @@ func (rf *Raft) persist() {
 	e.Encode(rf.currentTerm)
 	e.Encode(rf.votedFor)
 	e.Encode(rf.log)
+	e.Encode(rf.snapshotIndex)
+	e.Encode(rf.snapshotTerm)
 	data := w.Bytes()
 	rf.persister.SaveRaftState(data)
 }
@@ -153,15 +174,21 @@ func (rf *Raft) readPersist(data []byte) {
 	d := gob.NewDecoder(r)
 	var currentTerm int
 	var votedFor int
+	var snapshotIndex int
+	var snapshotTerm int
 	var logs []LogEntry
 	if d.Decode(&currentTerm) != nil ||
 		d.Decode(&votedFor) != nil ||
-		d.Decode(&logs) != nil {
+		d.Decode(&logs) != nil ||
+		d.Decode(&rf.snapshotIndex) != nil ||
+		d.Decode(&rf.snapshotTerm) != mil {
 		log.Fatal("[readPersist]: decode error!\n")
 	} else {
 		rf.currentTerm = currentTerm
 		rf.votedFor = votedFor
 		rf.log = logs
+		rf.snapshotIndex = snapshotIndex
+		rf.snapshotTerm = rf.snapshotTerm
 	}
 }
 
@@ -188,11 +215,11 @@ type RequestVoteReply struct {
 }
 
 func (rf *Raft) getLastLogIndex() int {
-	return len(rf.log) - 1
+	index := rf.snapshotIndex + len(rf.log) - 1
 }
 
 func (rf *Raft) getLastLogTerm() int {
-	return rf.log[len(rf.log)-1].Term
+	term := rf.log[len(rf.log)].Term
 }
 
 //
@@ -543,7 +570,7 @@ func (rf *Raft) init() {
 	rf.matchIndex = make([]int, len(rf.peers))
 }
 
-func (rf *Raft) randomElectionTimeout() time.Duration {
+func RandomElectionTimeout() time.Duration {
 	return ELECTIONTIMEMIN + time.Millisecond*time.Duration(rand.Int63n(ElectionTimeOutRange))
 }
 
@@ -554,7 +581,7 @@ func (rf *Raft) StateSwitchLoop() {
 			select {
 			case <-rf.heartbeatCh:
 			case <-rf.grantVoteCh:
-			case <-time.After(rf.randomElectionTimeout()):
+			case <-time.After(RandomElectionTimeout()):
 				rf.mu.Lock()
 				rf.state = CANDIDATE
 				rf.mu.Unlock()
@@ -576,7 +603,7 @@ func (rf *Raft) StateSwitchLoop() {
 			select {
 			case <-rf.winElectionCh:
 			case <-rf.heartbeatCh:
-			case <-time.After(rf.randomElectionTimeout()):
+			case <-time.After(RandomElectionTimeout()):
 			}
 		}
 	}
